@@ -39,8 +39,9 @@ pub struct Health {
 }
 
 impl Health {
-    pub fn new(rules: Rules, now: u64) -> Self {
-        Health { rules, started: now, failures: 0, last_avg10: None, hard_since: None, verdict: None }
+    /// `started` is the instant the startup grace counts from.
+    pub fn new(rules: Rules, started: u64) -> Self {
+        Health { rules, started, failures: 0, last_avg10: None, hard_since: None, verdict: None }
     }
 
     pub fn verdict(&self) -> Option<Reason> {

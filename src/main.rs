@@ -157,7 +157,10 @@ fn run(cfg: Config) -> i32 {
             psi_hard_seconds: cfg.psi_hard_seconds as u64,
             startup_grace: cfg.startup_grace as u64,
         },
-        start,
+        // Grace counts from BOOT (CLOCK_BOOTTIME), not from process start:
+        // under Restart=always a crash loop must not re-earn the grace and
+        // keep re-arming the pet forever while the host is wedged.
+        0,
     );
 
     // Arm last: everything that can fail at startup has already failed.

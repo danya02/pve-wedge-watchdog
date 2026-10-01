@@ -34,7 +34,7 @@ pub struct Config {
     pub probe_interval: u32,
     pub probe_timeout: u32,
     pub probe_failures: u32,
-    /// Probe failures are ignored this long after start (sshd may be late).
+    /// Probe failures are ignored until this many seconds after BOOT.
     pub startup_grace: u32,
     pub sysrq_reboot: bool,
     pub sysrq_grace: u32,
@@ -222,5 +222,14 @@ mod tests {
         assert!(Config::parse("watchdog_timeout = 20").is_err());
         assert!(Config::parse("watchdog = mux:/x\nwatchdog_timeout = 90").is_err());
         assert!(Config::parse("probe_failures = 0").is_err());
+    }
+}
+
+#[cfg(test)]
+mod shipped {
+    #[test]
+    fn shipped_conf_parses_and_is_dry_run() {
+        let c = super::Config::parse(include_str!("../pve-wedge-watchdog.conf")).unwrap();
+        assert!(c.dry_run);
     }
 }
