@@ -1,0 +1,18 @@
+[package]
+name = "pve-wedge-watchdog"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+description = "Pets a kernel watchdog only while a Proxmox VE host is not wedged on memory"
+license = "MIT"
+repository = "https://github.com/danya02/pve-wedge-watchdog"
+
+[dependencies]
+libc = "0.2"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
