@@ -1,3 +1,12 @@
+pve-wedge-watchdog (0.1.2) unstable; urgency=medium
+
+  * Upgrades no longer leave the watchdog stopped: --no-stop-on-upgrade plus
+    a restart in postinst when the unit is enabled (0.1.0 -> 0.1.1
+    silently disarmed it).
+  * Move StartLimitIntervalSec to [Unit], where systemd reads it.
+
+ -- Danya Generalov <danya@danya02.ru>  Thu, 01 Oct 2026 11:52:30 +0300
+
 pve-wedge-watchdog (0.1.1) unstable; urgency=medium
 
   * Ship the passthrough memory guard hookscript in

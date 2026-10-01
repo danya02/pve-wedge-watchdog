@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+
+#DEBHELPER#
+
+# The watchdog is installed --no-start (a fresh install must not arm anything),
+# so debhelper never starts it again after an upgrade, and 0.1.1 and earlier
+# stop it in prerm. Enabling the unit is the operator's opt-in: if it is
+# enabled, (re)start it onto the new binary; if not, leave it alone.
+if [ "$1" = "configure" ] && [ -n "$2" ] && [ -d /run/systemd/system ] \
+   && systemctl -q is-enabled pve-wedge-watchdog.service 2>/dev/null; then
+	deb-systemd-invoke restart pve-wedge-watchdog.service || true
+fi
+
+exit 0

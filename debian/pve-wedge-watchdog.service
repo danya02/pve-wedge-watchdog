@@ -5,6 +5,11 @@ Documentation=file:///usr/share/doc/pve-wedge-watchdog/README.md
 # the rest. Not Requires=: a dead sshd is exactly what we want to notice.
 After=ssh.service watchdog-mux.service
 DefaultDependencies=yes
+# A crash loop is safe: an armed watchdog keeps counting across restarts (a
+# crash closes the fd without the magic 'V'), and startup_grace counts from
+# boot, so the loop cannot postpone a reboot indefinitely.
+# (StartLimitIntervalSec belongs in [Unit]; in [Service] it is ignored.)
+StartLimitIntervalSec=0
 
 [Service]
 Type=notify
@@ -12,10 +17,6 @@ NotifyAccess=main
 ExecStart=/usr/bin/pve-wedge-watchdog --config /etc/pve-wedge-watchdog.conf
 Restart=always
 RestartSec=5s
-# A crash loop is safe: an armed watchdog keeps counting across restarts (a
-# crash closes the fd without the magic 'V'), and startup_grace counts from
-# boot, so the loop cannot postpone a reboot indefinitely.
-StartLimitIntervalSec=0
 
 CPUSchedulingPolicy=fifo
 CPUSchedulingPriority=50
