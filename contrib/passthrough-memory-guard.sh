@@ -11,9 +11,10 @@
 #   chmod +x /var/lib/vz/snippets/passthrough-memory-guard.sh
 #   qm set <vmid> --hookscript local:snippets/passthrough-memory-guard.sh
 #
-# Margin: PVE_GUARD_MARGIN_MIB in /etc/default/pve-passthrough-guard
-# (default 16384). A VM can be forced past the guard by removing the
-# hookscript (qm set <vmid> --delete hookscript).
+# Margin, in /etc/default/pve-passthrough-guard: PVE_GUARD_MARGIN_PCT of
+# MemTotal (default 10, so ~25 GiB on a 256 GiB host, ~1.6 GiB on a 16 GiB
+# one), or an absolute PVE_GUARD_MARGIN_MIB, which wins if set. A VM can be forced past
+# the guard by removing the hookscript (qm set <vmid> --delete hookscript).
 
 set -u
 vmid="$1"
@@ -21,9 +22,10 @@ phase="$2"
 
 [ "$phase" = "pre-start" ] || exit 0
 
-MARGIN_MIB=16384
+PVE_GUARD_MARGIN_PCT=10
 [ -r /etc/default/pve-passthrough-guard ] && . /etc/default/pve-passthrough-guard
-MARGIN_MIB="${PVE_GUARD_MARGIN_MIB:-$MARGIN_MIB}"
+total_kib=$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)
+MARGIN_MIB="${PVE_GUARD_MARGIN_MIB:-$((total_kib / 1024 * PVE_GUARD_MARGIN_PCT / 100))}"
 
 conf=$(qm config "$vmid") || { echo "guard: cannot read config of VM $vmid" >&2; exit 1; }
 
