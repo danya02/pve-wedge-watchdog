@@ -1,0 +1,36 @@
+#!/usr/bin/make -f
+
+# Offline build against Debian's packaged crates (librust-libc-dev).
+export CARGO_HOME = $(CURDIR)/debian/cargo_home
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@
+
+# Cargo.lock pins crates.io versions; Debian ships its own libc version, so
+# the lock is regenerated against /usr/share/cargo/registry for the deb build.
+override_dh_auto_configure:
+	rm -f Cargo.lock
+	mkdir -p $(CARGO_HOME)
+	printf '[source.crates-io]\nreplace-with = "debian"\n[source.debian]\ndirectory = "/usr/share/cargo/registry"\n[net]\noffline = true\n' > $(CARGO_HOME)/config.toml
+
+override_dh_auto_build:
+	cargo build --release --offline
+
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	cargo test --release --offline
+endif
+
+override_dh_auto_install:
+	install -Dm755 target/release/pve-wedge-watchdog debian/pve-wedge-watchdog/usr/bin/pve-wedge-watchdog
+	install -Dm644 pve-wedge-watchdog.conf debian/pve-wedge-watchdog/etc/pve-wedge-watchdog.conf
+
+override_dh_auto_clean:
+	rm -rf target debian/cargo_home
+	git checkout -- Cargo.lock 2>/dev/null || true
+
+# Installed disabled and not started: an armed watchdog on a fresh install,
+# before anyone has read the config, is how you get a surprise reboot loop.
+override_dh_installsystemd:
+	dh_installsystemd --no-enable --no-start

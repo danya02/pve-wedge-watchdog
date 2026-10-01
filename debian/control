@@ -1,0 +1,31 @@
+Source: pve-wedge-watchdog
+Section: admin
+Priority: optional
+Maintainer: Danya Generalov <danya@danya02.ru>
+Build-Depends: debhelper-compat (= 13),
+               cargo,
+               rustc,
+               librust-libc-dev
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://github.com/danya02/pve-wedge-watchdog
+Vcs-Git: https://github.com/danya02/pve-wedge-watchdog.git
+Vcs-Browser: https://github.com/danya02/pve-wedge-watchdog
+
+Package: pve-wedge-watchdog
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends: earlyoom
+Suggests: pve-manager
+Description: reboot a Proxmox VE host via kernel watchdog when it wedges
+ pve-wedge-watchdog keeps petting a kernel watchdog device only while the
+ host is healthy. Health is memory pressure (PSI) plus a local SSH banner
+ probe, which exercises fork, exec and page-in. When the host wedges under
+ memory pressure -- sshd and journald dead, ping still answering, MemAvailable
+ never low enough for earlyoom -- it stops petting and the kernel reboots the
+ machine, even if this daemon itself is stalled.
+ .
+ Ships in dry-run mode and disabled; see README.Debian before arming it.
+ .
+ contrib/ has a Proxmox hookscript that refuses to start a PCI-passthrough VM
+ whose pinned memory would not fit in MemAvailable.

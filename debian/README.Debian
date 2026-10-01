@@ -1,0 +1,14 @@
+pve-wedge-watchdog for Debian / Proxmox VE
+==========================================
+
+The service is installed DISABLED and the shipped config has dry_run = true.
+
+ 1. Pick a watchdog device that watchdog-mux does not hold (README.md,
+    "Which watchdog device"); set `watchdog =` in /etc/pve-wedge-watchdog.conf.
+ 2. Run in dry-run for a few days: systemctl enable --now pve-wedge-watchdog
+    and watch `journalctl -u pve-wedge-watchdog` for false verdicts.
+ 3. Test arming in a throwaway VM first (testing.md), then set dry_run = false
+    and restart.
+
+`systemctl stop` disarms cleanly (magic close) unless the daemon has already
+decided the host is wedged, in which case the reboot proceeds.

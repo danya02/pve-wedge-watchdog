@@ -1,0 +1,30 @@
+[Unit]
+Description=Reboot via kernel watchdog when the host wedges on memory pressure
+Documentation=file:///usr/share/doc/pve-wedge-watchdog/README.md
+# Start after sshd so the probe has something to talk to; startup_grace covers
+# the rest. Not Requires=: a dead sshd is exactly what we want to notice.
+After=ssh.service watchdog-mux.service
+DefaultDependencies=yes
+
+[Service]
+Type=notify
+NotifyAccess=main
+ExecStart=/usr/bin/pve-wedge-watchdog --config /etc/pve-wedge-watchdog.conf
+Restart=always
+RestartSec=5s
+# A crash loop is safe: an armed watchdog keeps counting across restarts (a
+# crash closes the fd without the magic 'V'), and startup_grace counts from
+# boot, so the loop cannot postpone a reboot indefinitely.
+StartLimitIntervalSec=0
+
+CPUSchedulingPolicy=fifo
+CPUSchedulingPriority=50
+OOMScoreAdjust=-1000
+MemoryMin=64M
+LimitMEMLOCK=infinity
+# Never stall on journald: the binary sets stderr O_NONBLOCK and drops lines.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
