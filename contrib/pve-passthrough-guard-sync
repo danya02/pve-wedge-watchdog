@@ -1,0 +1,74 @@
+#!/bin/bash
+# Attach passthrough-memory-guard.sh to every VM on this node whose RAM is
+# pinned up front (hostpci* or hugepages:), and keep the snippet copy current.
+#
+#  - no hookscript       -> qm set <id> --hookscript local:snippets/<guard>
+#  - our hookscript      -> nothing
+#  - another hookscript  -> never touched; a warning is logged
+#
+# Never modifies storage config: if storage `local` has no `snippets`
+# content, it logs and skips. Idempotent; silent when nothing changes.
+# Run at boot before pve-guests.service and every 5 minutes by a timer.
+#
+# Env overrides (for testing): PVE_GUARD_SRC, PVE_GUARD_SNIPPETS_DIR,
+# PVE_GUARD_CONF_DIR, PVE_GUARD_STORAGE_CFG, PVE_GUARD_QM.
+
+set -u
+
+NAME=passthrough-memory-guard.sh
+SRC="${PVE_GUARD_SRC:-/usr/share/pve-wedge-watchdog/$NAME}"
+SNIPPETS="${PVE_GUARD_SNIPPETS_DIR:-/var/lib/vz/snippets}"
+CONF_DIR="${PVE_GUARD_CONF_DIR:-/etc/pve/qemu-server}"
+STORAGE_CFG="${PVE_GUARD_STORAGE_CFG:-/etc/pve/storage.cfg}"
+QM="${PVE_GUARD_QM:-qm}"
+OURS="local:snippets/$NAME"
+
+log() { echo "pve-passthrough-guard-sync: $*"; }
+warn() { echo "pve-passthrough-guard-sync: WARNING: $*" >&2; }
+
+# Does storage `local` (dir) list snippets in its content?
+local_has_snippets() {
+    [ -r "$STORAGE_CFG" ] || return 1
+    awk '
+        /^[a-z]+: */ { in_local = ($0 ~ /^dir: *local *$/); next }
+        in_local && $1 == "content" {
+            n = split($2, c, ","); for (i = 1; i <= n; i++) if (c[i] == "snippets") found = 1
+        }
+        END { exit !found }' "$STORAGE_CFG"
+}
+
+if ! local_has_snippets; then
+    log "storage 'local' has no 'snippets' content; not deploying the guard (storage config left alone)"
+    exit 0
+fi
+
+if [ ! -r "$SRC" ]; then
+    warn "$SRC missing"
+    exit 1
+fi
+if ! cmp -s "$SRC" "$SNIPPETS/$NAME"; then
+    mkdir -p "$SNIPPETS"
+    install -m 0755 "$SRC" "$SNIPPETS/$NAME.tmp" && mv -f "$SNIPPETS/$NAME.tmp" "$SNIPPETS/$NAME"
+    log "installed $SNIPPETS/$NAME"
+fi
+
+rc=0
+shopt -s nullglob
+for conf in "$CONF_DIR"/*.conf; do
+    vmid=$(basename "$conf" .conf)
+    # Current config only: stop at the first [snapshot] / [special] section.
+    cur=$(sed '/^\[/,$d' "$conf")
+    grep -qE '^(hostpci[0-9]+|hugepages):' <<<"$cur" || continue
+    hook=$(sed -n 's/^hookscript: *//p' <<<"$cur")
+    if [ -z "$hook" ]; then
+        if "$QM" set "$vmid" --hookscript "$OURS" >/dev/null; then
+            log "VM $vmid: pinned memory, attached hookscript $OURS"
+        else
+            warn "VM $vmid: qm set --hookscript failed"
+            rc=1
+        fi
+    elif [ "$hook" != "$OURS" ]; then
+        warn "VM $vmid has pinned memory but a different hookscript ($hook); NOT guarded, left untouched"
+    fi
+done
+exit $rc

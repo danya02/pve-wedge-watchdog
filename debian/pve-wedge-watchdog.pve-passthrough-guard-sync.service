@@ -1,0 +1,14 @@
+[Unit]
+Description=Attach the passthrough memory guard hookscript to pinned-memory VMs
+Documentation=file:///usr/share/doc/pve-wedge-watchdog/README.md
+After=pve-cluster.service
+Wants=pve-cluster.service
+Before=pve-guests.service
+ConditionPathIsDirectory=/etc/pve/qemu-server
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/pve-passthrough-guard-sync
+
+[Install]
+WantedBy=multi-user.target

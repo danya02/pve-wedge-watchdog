@@ -14,6 +14,26 @@ Covers config parsing (including the shipped file being dry-run), PSI parsing,
 and every rule of the health state machine with injected time and probe
 results.
 
+The guard hookscript and `pve-passthrough-guard-sync` have a shell harness
+with a fake `qm`, fake `/etc/pve/qemu-server`, fake `storage.cfg` and
+`/proc/meminfo` (all paths overridable via `PVE_GUARD_*` env vars):
+
+```bash
+shellcheck contrib/passthrough-memory-guard.sh contrib/pve-passthrough-guard-sync tests/guard.sh
+tests/guard.sh
+```
+
+It covers: no hookscript → `qm set`; ours → no-op; foreign → warning, untouched;
+non-pinned VM (and `hostpci` only in a snapshot section) → ignored; hugepages
+VM → guarded; second run quiet; drifted snippet refreshed; `local` without
+snippets → skip; refuse/admit decisions; both bypass paths logged.
+
+On a throwaway PVE VM (nested): install the .deb, check
+`journalctl -u pve-passthrough-guard-sync` and `qm config <id> | grep hookscript`
+for a VM with `hugepages: 2`, then start it with more memory than is available
+and confirm the task log shows `REFUSING`; `touch
+/etc/pve-passthrough-guard.d/<id>.skip` and confirm `BYPASS`.
+
 ## 2. Dry run anywhere
 
 ```bash

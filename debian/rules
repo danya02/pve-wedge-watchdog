@@ -25,6 +25,8 @@ endif
 override_dh_auto_install:
 	install -Dm755 target/release/pve-wedge-watchdog debian/pve-wedge-watchdog/usr/bin/pve-wedge-watchdog
 	install -Dm644 pve-wedge-watchdog.conf debian/pve-wedge-watchdog/etc/pve-wedge-watchdog.conf
+	install -Dm755 contrib/passthrough-memory-guard.sh debian/pve-wedge-watchdog/usr/share/pve-wedge-watchdog/passthrough-memory-guard.sh
+	install -Dm755 contrib/pve-passthrough-guard-sync debian/pve-wedge-watchdog/usr/sbin/pve-passthrough-guard-sync
 
 override_dh_auto_clean:
 	rm -rf target debian/cargo_home
@@ -32,5 +34,8 @@ override_dh_auto_clean:
 
 # Installed disabled and not started: an armed watchdog on a fresh install,
 # before anyone has read the config, is how you get a surprise reboot loop.
+# The guard sync, by contrast, is enabled: it only attaches a hookscript that
+# refuses unsafe VM starts, and never touches a VM with a foreign hookscript.
 override_dh_installsystemd:
-	dh_installsystemd --no-enable --no-start
+	dh_installsystemd --no-enable --no-start pve-wedge-watchdog.service
+	dh_installsystemd --name=pve-passthrough-guard-sync pve-passthrough-guard-sync.service pve-passthrough-guard-sync.timer

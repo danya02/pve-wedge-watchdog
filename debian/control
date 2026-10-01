@@ -27,5 +27,6 @@ Description: reboot a Proxmox VE host via kernel watchdog when it wedges
  .
  Ships in dry-run mode and disabled; see README.Debian before arming it.
  .
- contrib/ has a Proxmox hookscript that refuses to start a PCI-passthrough VM
- whose pinned memory would not fit in MemAvailable.
+ Also ships a Proxmox pre-start hookscript, auto-attached to PCI-passthrough
+ and hugepages VMs by an enabled sync timer, that refuses to start a VM whose
+ pinned memory would not fit in MemAvailable.

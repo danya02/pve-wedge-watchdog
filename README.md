@@ -160,20 +160,49 @@ never opens the device.
 startup. Unknown keys are an error, so a typo in a threshold stops the service
 instead of silently using the default.
 
-## Prevention: contrib/
+## Prevention: the passthrough memory guard
 
 These reduce how often the watchdog has to act.
 
-**`contrib/passthrough-memory-guard.sh`** — a PVE hookscript that refuses to
-start a VM with `hostpci*` whose `memory` exceeds `MemAvailable` minus a margin
-(16 GiB by default; set `PVE_GUARD_MARGIN_MIB` in
-`/etc/default/pve-passthrough-guard`):
+**Passthrough memory guard** (shipped and enabled by the package). A PVE
+pre-start hookscript that refuses to start a VM with `hostpci*` or `hugepages:`
+whose `memory` exceeds `MemAvailable` minus a margin (10% of MemTotal by
+default). Installed as `/usr/share/pve-wedge-watchdog/passthrough-memory-guard.sh`.
+
+`pve-passthrough-guard-sync` (`/usr/sbin`; `pve-passthrough-guard-sync.service`
+once at boot before `pve-guests.service`, plus a 5-minute timer, both enabled
+on install) copies it to `/var/lib/vz/snippets/` when missing or changed and,
+for every VM on this node with `hostpci*` or `hugepages:`:
+
+| VM hookscript | action |
+|---|---|
+| none | `qm set <id> --hookscript local:snippets/passthrough-memory-guard.sh`, logged |
+| already the guard | nothing |
+| something else | never touched; a warning is logged (that VM is unguarded) |
+
+If storage `local` has no `snippets` content it logs and does nothing; it never
+edits storage config. To disable: `systemctl disable --now
+pve-passthrough-guard-sync.timer pve-passthrough-guard-sync.service`.
+
+Settings, `/etc/default/pve-passthrough-guard` (shell syntax):
 
 ```bash
-cp /usr/share/doc/pve-wedge-watchdog/examples/passthrough-memory-guard.sh /var/lib/vz/snippets/
-chmod +x /var/lib/vz/snippets/passthrough-memory-guard.sh
-qm set <vmid> --hookscript local:snippets/passthrough-memory-guard.sh
+PVE_GUARD_MARGIN_PCT=10        # margin as % of MemTotal
+#PVE_GUARD_MARGIN_MIB=16384    # absolute margin; wins if set
+PVE_GUARD_SKIP="200 9000"      # vmids allowed past the guard
 ```
+
+Or bypass one VM with `touch /etc/pve-passthrough-guard.d/<vmid>.skip`. Every
+bypass is printed loudly in the VM's start task log.
+
+### Why only passthrough/hugepages VMs
+
+A normal VM allocates its RAM lazily and that RAM is swappable and
+balloonable, so overcommit shows up as gradual pressure that earlyoom, the
+kernel OOM killer and this watchdog handle. A passthrough VM (VFIO pins all
+guest RAM for DMA) or a `hugepages:` VM demands **all** of its RAM
+synchronously at start and can never give it back — that is the wedge. So
+only those are guarded.
 
 **earlyoom** — still worth running, but **without `--prefer kvm`** (or any
 `--prefer` matching QEMU). A passthrough VM's RAM is pinned; killing the QEMU

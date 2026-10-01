@@ -22,7 +22,7 @@ jobs:
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             build-essential ca-certificates debhelper devscripts git lintian \
-            cargo rustc librust-libc-dev
+            cargo rustc librust-libc-dev shellcheck
 
       - uses: actions/checkout@v4
 
@@ -35,6 +35,11 @@ jobs:
             echo "::error::version mismatch: debian/changelog is $deb, Cargo.toml is $proj"
             exit 1
           fi
+
+      - name: Shell scripts (shellcheck + fake-PVE harness)
+        run: |
+          shellcheck contrib/passthrough-memory-guard.sh contrib/pve-passthrough-guard-sync tests/guard.sh
+          tests/guard.sh
 
       # Runs the unit suite too (override_dh_auto_test).
       - name: Build package
@@ -57,6 +62,10 @@ jobs:
           # Dry run must never touch a device; run it briefly and stop it.
           timeout -s INT 3 pve-wedge-watchdog --dry-run || [ $? -eq 124 ]
           test ! -e /etc/systemd/system/multi-user.target.wants/pve-wedge-watchdog.service
+          test -x /usr/share/pve-wedge-watchdog/passthrough-memory-guard.sh
+          test -x /usr/sbin/pve-passthrough-guard-sync
+          test -e /etc/systemd/system/multi-user.target.wants/pve-passthrough-guard-sync.service
+          test -e /etc/systemd/system/timers.target.wants/pve-passthrough-guard-sync.timer
 
       - uses: actions/upload-artifact@v4
         with:

@@ -1,3 +1,14 @@
+pve-wedge-watchdog (0.1.1) unstable; urgency=medium
+
+  * Ship the passthrough memory guard hookscript in
+    /usr/share/pve-wedge-watchdog/ and guard hugepages VMs too.
+  * Per-VM bypass: PVE_GUARD_SKIP and /etc/pve-passthrough-guard.d/<vmid>.skip,
+    logged to the task log.
+  * New pve-passthrough-guard-sync service + 5-minute timer (enabled) that
+    deploys the snippet and attaches it to unhooked pinned-memory VMs.
+
+ -- Danya Generalov <danya@danya02.ru>  Thu, 01 Oct 2026 18:00:00 +0000
+
 pve-wedge-watchdog (0.1.0) unstable; urgency=medium
 
   * Initial release.

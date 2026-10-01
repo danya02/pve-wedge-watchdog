@@ -12,3 +12,15 @@ The service is installed DISABLED and the shipped config has dry_run = true.
 
 `systemctl stop` disarms cleanly (magic close) unless the daemon has already
 decided the host is wedged, in which case the reboot proceeds.
+
+Passthrough memory guard
+------------------------
+
+Unlike the watchdog, pve-passthrough-guard-sync.{service,timer} are ENABLED on
+install. They attach /usr/share/pve-wedge-watchdog/passthrough-memory-guard.sh
+(copied to /var/lib/vz/snippets/) as the hookscript of every VM on this node
+with hostpci* or hugepages: that has no hookscript yet. The guard only refuses
+VM starts whose pinned RAM does not fit MemAvailable minus a margin. VMs with
+a different hookscript are left alone (warning in the journal). Bypass: list
+the vmid in PVE_GUARD_SKIP in /etc/default/pve-passthrough-guard, or touch
+/etc/pve-passthrough-guard.d/<vmid>.skip. See README.md.

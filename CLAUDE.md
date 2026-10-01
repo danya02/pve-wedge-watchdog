@@ -15,7 +15,8 @@ Runs on the PVE node as a systemd service. Rationale and incident: README.
 | `src/sys.rs` | libc wrappers: SSH probe, sd_notify, clocks |
 | `src/log.rs` | stack-buffer logging to non-blocking stderr |
 | `src/main.rs` | startup (open everything, mlockall, arm last) and the loop |
-| `contrib/` | PVE pre-start hookscript for passthrough VMs |
+| `contrib/` | guard hookscript (passthrough/hugepages VMs) + `pve-passthrough-guard-sync`; shipped, sync enabled |
+| `tests/guard.sh` | fake-`qm` harness for both scripts (run by CI with shellcheck) |
 
 **Keep decisions in `health.rs` and I/O out of it.** That is what makes every
 rule testable without a host.
