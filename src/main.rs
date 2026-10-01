@@ -167,7 +167,7 @@ fn run(cfg: Config) -> i32 {
     let wd = match Watchdog::open(&cfg.watchdog, cfg.watchdog_timeout, cfg.dry_run) {
         Ok(w) => w,
         Err(e) => {
-            log!("cannot open watchdog {:?}: {e}", cfg.watchdog);
+            log!("cannot open watchdog {:?}: {e} (driver not loaded? PVE blacklists watchdog modules; see README)", cfg.watchdog);
             return 1;
         }
     };

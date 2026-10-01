@@ -82,13 +82,25 @@ needs **its own** device. The options, in order of preference:
    than a second software timer because it fires even if the kernel itself is
    hung. PVE's kernel **blacklists all watchdog modules** by default
    (`/lib/modprobe.d/blacklist_pve-kernel-*.conf`) so that only one is ever
-   loaded for HA; load it explicitly:
+   loaded for HA. **`/etc/modules-load.d/` does not work for this**:
+   `systemd-modules-load` honours the blacklist ("Module 'sp5100_tco' is
+   deny-listed (by kmod)") and the service then has no device at boot. An
+   explicit `modprobe` does not honour it, so load it from the unit:
 
    ```bash
-   echo sp5100_tco > /etc/modules-load.d/sp5100_tco.conf   # or iTCO_wdt
-   modprobe sp5100_tco
+   mkdir -p /etc/systemd/system/pve-wedge-watchdog.service.d
+   cat > /etc/systemd/system/pve-wedge-watchdog.service.d/module.conf <<'EOF'
+   [Service]
+   ExecStartPre=-/usr/sbin/modprobe sp5100_tco
+   EOF
+   systemctl daemon-reload
    ls -l /sys/class/watchdog/*/  ; cat /sys/class/watchdog/watchdog1/identity
    ```
+
+   (Use `iTCO_wdt` on Intel.) The package does not ship this drop-in because
+   the module name depends on the chipset. Verify with a real reboot that
+   the service comes up armed; a crash loop on "cannot open watchdog" means
+   the module did not load.
 
    Check `dmesg` — some boards disable the TCO in firmware, and the driver
    then refuses to load. Point `watchdog =` at whichever `/dev/watchdogN` has
